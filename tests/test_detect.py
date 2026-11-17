@@ -45,6 +45,11 @@ class DetectRulesTest(unittest.TestCase):
         self.assertEqual(hit.principal, "lab-intern")
         self.assertIn("3 denied calls", hit.detail)
 
+    def test_console_login_without_mfa(self):
+        hits = self.by_rule["LAB-007"]
+        self.assertEqual(len(hits), 1)  # the MFA login is not a finding
+        self.assertEqual(hits[0].principal, "lab-contractor")
+
     def test_successful_only_drops_failed_attempts(self):
         events = detect.load_events_file(os.path.join(HERE, "sample_events.json"))
         findings = detect.evaluate(events, detect.DEFAULT_SECRET_ALLOWLIST, include_failed=False)

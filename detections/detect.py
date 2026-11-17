@@ -142,6 +142,16 @@ def r_secret_enumeration(ev: dict, cfg: dict) -> str | None:
     return None
 
 
+def r_console_no_mfa(ev: dict, cfg: dict) -> str | None:
+    if ev.get("eventName") != "ConsoleLogin":
+        return None
+    extra = ev.get("additionalEventData") or {}
+    login = (ev.get("responseElements") or {}).get("ConsoleLogin")
+    if login == "Success" and str(extra.get("MFAUsed")).lower() == "no":
+        return f"{principal(ev)} signed in to the console without MFA from {ev.get('sourceIPAddress', 'unknown IP')}"
+    return None
+
+
 RULES = [
     Rule("LAB-001", "IAM policy version set as default", "HIGH",
          "T1098.003 Account Manipulation: Additional Cloud Roles", r_policy_version_default),
@@ -153,6 +163,8 @@ RULES = [
          "T1555.006 Credentials from Password Stores: Cloud Secrets Management Stores", r_secret_outside_allowlist),
     Rule("LAB-005", "Secrets enumeration", "MEDIUM",
          "T1580 Cloud Infrastructure Discovery", r_secret_enumeration),
+    Rule("LAB-007", "Console login without MFA", "HIGH",
+         "T1078.004 Valid Accounts: Cloud Accounts", r_console_no_mfa),
 ]
 
 

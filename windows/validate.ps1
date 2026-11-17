@@ -23,7 +23,7 @@ if ($LASTEXITCODE -ne 0) { Fail 'Fix preflight warnings first'; exit 1 }
 
 $Start = [DateTime]::UtcNow
 # CloudTrail tampering runs last so it can't affect logging for the other scenarios.
-foreach ($script in '01_iam_privesc.ps1', '03_secrets_theft.ps1', '02_cloudtrail_tamper.ps1') {
+foreach ($script in '01_iam_privesc.ps1', '03_secrets_theft.ps1', '04_no_mfa.ps1', '02_cloudtrail_tamper.ps1') {
   $Total++
   Write-Host "`n========== $script ($Mode mode) =========="
   Invoke-Script "$PSScriptRoot\$script"

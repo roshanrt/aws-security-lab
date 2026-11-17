@@ -15,7 +15,7 @@ PASS=0; TOTAL=0
 
 START="$(date -u +%s)"
 # CloudTrail tampering runs last so it can't affect logging for the other scenarios.
-for script in 01_iam_privesc.sh 03_secrets_theft.sh 02_cloudtrail_tamper.sh; do
+for script in 01_iam_privesc.sh 03_secrets_theft.sh 04_no_mfa.sh 02_cloudtrail_tamper.sh; do
   TOTAL=$((TOTAL + 1))
   printf '\n========== %s (%s mode) ==========\n' "$script" "$MODE"
   set +e; bash "$ATTACKS/$script"; RC=$?; set -e

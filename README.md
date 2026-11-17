@@ -14,7 +14,7 @@ I am a security professional (AppSec and red team background) moving into cloud 
 flowchart LR
   subgraph P1["Part 1: base lab (one account)"]
     direction TB
-    S1["3 attack scenarios<br/>privilege escalation, log tampering, secrets theft"]
+    S1["4 attack scenarios<br/>privilege escalation, log tampering, secrets theft, no-MFA login"]
     D1["detect.py<br/>CloudTrail rules mapped to ATT&CK"]
     S1 --> D1
   end
@@ -30,7 +30,7 @@ flowchart LR
 
 | Part | What it is | Where |
 |------|------------|-------|
-| **1. Base lab** | One account, three attacks, each with a vulnerable and a hardened build, plus a detection engine | `terraform/`, `windows/`, `attacks/`, `scripts/`, `detections/`, `tests/` |
+| **1. Base lab** | One account, four attacks, each with a vulnerable and a hardened build, plus a detection engine | `terraform/`, `windows/`, `attacks/`, `scripts/`, `detections/`, `tests/` |
 | **2. Enterprise landing zone** | Six accounts under an Organization: SCPs, MFA-gated identity hub, Object-Locked log archive, one KMS key per data class, three-tier VPCs, edge protection, an automated detection and containment pipeline | [`enterprise/`](enterprise/) |
 | **3. Honesty about the emulator** | A written list of what LocalStack proves, what it only configures, and what must be checked on real AWS | [`enterprise/COVERAGE.md`](enterprise/COVERAGE.md) |
 
@@ -69,6 +69,9 @@ Not every post is written yet. The code for all of them is already here.
 | 1 | IAM privilege escalation with `iam:CreatePolicyVersion` | `lab-intern` | May "maintain their own policy", so can write a new default version that grants `*:*` | T1580, [T1098.003](https://attack.mitre.org/techniques/T1098/003/) | `LAB-001`, `LAB-002` | Self-read only, plus a permissions boundary that denies IAM writes |
 | 2 | Defense evasion by stopping CloudTrail | `lab-ops` | Was given `cloudtrail:*` "to manage trails" | [T1562.008](https://attack.mitre.org/techniques/T1562/008/) | `LAB-003` | Read-only CloudTrail access plus an explicit deny on tampering |
 | 3 | Credential theft from Secrets Manager | `lab-app` | Can read and decrypt every secret, including `lab/prod/db-credentials` | [T1555.006](https://attack.mitre.org/techniques/T1555/006/) | `LAB-004`, `LAB-005` | `GetSecretValue` on its own secret only, and `kms:Decrypt` only through Secrets Manager |
+| 4 | Valid account without MFA (console password or stolen key), modeled on Stratus Red Team [`console-login-without-mfa`](https://stratus-red-team.cloud/attack-techniques/AWS/aws.initial-access.console-login-without-mfa/) | `lab-contractor` | Console password and access key, no MFA, and a policy that never requires it | [T1078.004](https://attack.mitre.org/techniques/T1078/004/) | `LAB-007`, `LAB-006` | Explicit deny on everything except MFA self-service when `aws:MultiFactorAuthPresent` is false |
+
+Scenario 4 caveat: LocalStack has no sign-in endpoint, so the attack script uses the contractor's access key (the same deny policy covers the console) and `LAB-007` is proven against a sample `ConsoleLogin` event in `tests/sample_events.json`.
 
 `LAB-006` is a cross-scenario rule: three or more `AccessDenied` calls from one identity. In hardened mode this is how you still see the attack you blocked.
 
@@ -92,6 +95,7 @@ Each attack script ends with `RESULT: ATTACK SUCCEEDED` (exit code 0) or `RESULT
 | `LAB-003` | CRITICAL | `StopLogging`, `DeleteTrail`, `UpdateTrail`, `PutEventSelectors` |
 | `LAB-004` | HIGH | `GetSecretValue` on a secret outside the caller's allowlist |
 | `LAB-005` | MEDIUM | `ListSecrets` enumeration |
+| `LAB-007` | HIGH | `ConsoleLogin` success with `MFAUsed` = `No` |
 | `LAB-006` | MEDIUM | Three or more denied calls from one identity |
 
 ```powershell
@@ -231,11 +235,12 @@ If it prints `IAM enforcement is OFF`, fix step 2 before going on.
 .\windows\validate.ps1              # hardened: every attack should be blocked and still detected
 ```
 
-`validate.ps1` runs preflight, all three attacks (CloudTrail tampering last, so it cannot hide the other two), and then the detections. You can also run one attack at a time:
+`validate.ps1` runs preflight, all four attacks (CloudTrail tampering last, so it cannot hide the other two), and then the detections. You can also run one attack at a time:
 
 ```powershell
 .\windows\01_iam_privesc.ps1
 .\windows\03_secrets_theft.ps1
+.\windows\04_no_mfa.ps1
 .\windows\02_cloudtrail_tamper.ps1      # run last: it stops logging
 py detections\detect.py --minutes 15
 ```
@@ -264,6 +269,7 @@ scripts/reset.sh vulnerable
 scripts/preflight.sh
 attacks/01_iam_privesc.sh
 attacks/03_secrets_theft.sh
+attacks/04_no_mfa.sh
 attacks/02_cloudtrail_tamper.sh     # run last: it stops logging
 python3 detections/detect.py --minutes 15
 scripts/reset.sh hardened

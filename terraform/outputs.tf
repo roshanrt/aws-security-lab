@@ -18,7 +18,7 @@ output "prod_secret_name" {
   value = aws_secretsmanager_secret.prod_db.name
 }
 
-# Lab-only keys for the three attacker identities. They exist only in LocalStack.
+# Lab-only keys for the four attacker identities. They exist only in LocalStack.
 output "credentials" {
   sensitive = true
   value = {
@@ -33,6 +33,10 @@ output "credentials" {
     app = {
       access_key_id     = aws_iam_access_key.app.id
       secret_access_key = aws_iam_access_key.app.secret
+    }
+    contractor = {
+      access_key_id     = aws_iam_access_key.contractor.id
+      secret_access_key = aws_iam_access_key.contractor.secret
     }
   }
 }
