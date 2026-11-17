@@ -20,6 +20,10 @@ if ($PolicyArn) {
   }
 }
 
+# Undo scenario 5 leftovers: the attack publishes a bucket policy Terraform does not manage.
+$DataBucket = Tf-Out data_bucket
+if ($DataBucket) { $null = Get-Aws s3api delete-bucket-policy --bucket $DataBucket }
+
 Log "Applying Terraform in '$Mode' mode"
 & $TfBin "-chdir=$TfDir" init -input=false | Out-Null
 if ($LASTEXITCODE -ne 0) { Fail 'terraform init failed. Re-run it by hand to see the error.'; exit 1 }

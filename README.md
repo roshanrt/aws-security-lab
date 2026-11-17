@@ -14,7 +14,7 @@ I am a security professional (AppSec and red team background) moving into cloud 
 flowchart LR
   subgraph P1["Part 1: base lab (one account)"]
     direction TB
-    S1["4 attack scenarios<br/>privilege escalation, log tampering, secrets theft, no-MFA login"]
+    S1["4 attack scenarios<br/>privilege escalation, log tampering, secrets theft, no-MFA login, public bucket"]
     D1["detect.py<br/>CloudTrail rules mapped to ATT&CK"]
     S1 --> D1
   end
@@ -30,7 +30,7 @@ flowchart LR
 
 | Part | What it is | Where |
 |------|------------|-------|
-| **1. Base lab** | One account, four attacks, each with a vulnerable and a hardened build, plus a detection engine | `terraform/`, `windows/`, `attacks/`, `scripts/`, `detections/`, `tests/` |
+| **1. Base lab** | One account, five attacks, each with a vulnerable and a hardened build, plus a detection engine | `terraform/`, `windows/`, `attacks/`, `scripts/`, `detections/`, `tests/` |
 | **2. Enterprise landing zone** | Six accounts under an Organization: SCPs, MFA-gated identity hub, Object-Locked log archive, one KMS key per data class, three-tier VPCs, edge protection, an automated detection and containment pipeline | [`enterprise/`](enterprise/) |
 | **3. Honesty about the emulator** | A written list of what LocalStack proves, what it only configures, and what must be checked on real AWS | [`enterprise/COVERAGE.md`](enterprise/COVERAGE.md) |
 
@@ -70,6 +70,7 @@ Not every post is written yet. The code for all of them is already here.
 | 2 | Defense evasion by stopping CloudTrail | `lab-ops` | Was given `cloudtrail:*` "to manage trails" | [T1562.008](https://attack.mitre.org/techniques/T1562/008/) | `LAB-003` | Read-only CloudTrail access plus an explicit deny on tampering |
 | 3 | Credential theft from Secrets Manager | `lab-app` | Can read and decrypt every secret, including `lab/prod/db-credentials` | [T1555.006](https://attack.mitre.org/techniques/T1555/006/) | `LAB-004`, `LAB-005` | `GetSecretValue` on its own secret only, and `kms:Decrypt` only through Secrets Manager |
 | 4 | Valid account without MFA (console password or stolen key), modeled on Stratus Red Team [`console-login-without-mfa`](https://stratus-red-team.cloud/attack-techniques/AWS/aws.initial-access.console-login-without-mfa/) | `lab-contractor` | Console password and access key, no MFA, and a policy that never requires it | [T1078.004](https://attack.mitre.org/techniques/T1078/004/) | `LAB-007`, `LAB-006` | Explicit deny on everything except MFA self-service when `aws:MultiFactorAuthPresent` is false |
+| 5 | Public bucket and data exfiltration | `lab-dev` | Holds `s3:*` on the customer-data bucket and Block Public Access is off, so one policy publishes it and anyone reads it | [T1530](https://attack.mitre.org/techniques/T1530/) | `LAB-008`, `LAB-006` | Block Public Access on, and an explicit deny on policy, ACL and Block Public Access changes |
 
 Scenario 4 caveat: LocalStack has no sign-in endpoint, so the attack script uses the contractor's access key (the same deny policy covers the console) and `LAB-007` is proven against a sample `ConsoleLogin` event in `tests/sample_events.json`.
 
@@ -96,6 +97,7 @@ Each attack script ends with `RESULT: ATTACK SUCCEEDED` (exit code 0) or `RESULT
 | `LAB-004` | HIGH | `GetSecretValue` on a secret outside the caller's allowlist |
 | `LAB-005` | MEDIUM | `ListSecrets` enumeration |
 | `LAB-007` | HIGH | `ConsoleLogin` success with `MFAUsed` = `No` |
+| `LAB-008` | HIGH | `DeletePublicAccessBlock`, `DeleteBucketPolicy`, a `PutBucketPolicy` that is public or unreadable, or a public ACL |
 | `LAB-006` | MEDIUM | Three or more denied calls from one identity |
 
 ```powershell
@@ -235,12 +237,13 @@ If it prints `IAM enforcement is OFF`, fix step 2 before going on.
 .\windows\validate.ps1              # hardened: every attack should be blocked and still detected
 ```
 
-`validate.ps1` runs preflight, all four attacks (CloudTrail tampering last, so it cannot hide the other two), and then the detections. You can also run one attack at a time:
+`validate.ps1` runs preflight, all five attacks (CloudTrail tampering last, so it cannot hide the other two), and then the detections. You can also run one attack at a time:
 
 ```powershell
 .\windows\01_iam_privesc.ps1
 .\windows\03_secrets_theft.ps1
 .\windows\04_no_mfa.ps1
+.\windows\05_public_bucket.ps1
 .\windows\02_cloudtrail_tamper.ps1      # run last: it stops logging
 py detections\detect.py --minutes 15
 ```
@@ -270,6 +273,7 @@ scripts/preflight.sh
 attacks/01_iam_privesc.sh
 attacks/03_secrets_theft.sh
 attacks/04_no_mfa.sh
+attacks/05_public_bucket.sh
 attacks/02_cloudtrail_tamper.sh     # run last: it stops logging
 python3 detections/detect.py --minutes 15
 scripts/reset.sh hardened
@@ -308,4 +312,4 @@ enterprise/    Part 2: the landing zone
 2. **Request logging and rotation.** WAF, ALB and CloudFront logs to the log archive, CloudTrail S3 data events, and a Secrets Manager rotation Lambda.
 3. **Run it on a real AWS organization.** Replace the bootstrap user with IAM Identity Center and CI OIDC, replace root with a deploy role, and work through the "verify on real AWS" column in `COVERAGE.md`.
 4. **Watch the watcher.** A heartbeat alarm when the detector stops, an organization trail, root-activity findings, and a second containment playbook.
-5. **More base scenarios.** Role trust policy backdoor (`UpdateAssumeRolePolicy`, T1098), access key persistence (`CreateAccessKey` for another user, T1098.001), public S3 bucket and exfiltration (T1530), KMS key scheduled for deletion (T1485), Lambda environment variable secrets (T1552.001).
+5. **More base scenarios.** Role trust policy backdoor (`UpdateAssumeRolePolicy`, T1098), access key persistence (`CreateAccessKey` for another user, T1098.001), KMS key scheduled for deletion (T1485), Lambda environment variable secrets (T1552.001).

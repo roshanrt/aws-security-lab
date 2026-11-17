@@ -19,6 +19,11 @@ if POLICY_ARN="$(tf_out intern_policy_arn 2>/dev/null)"; then
   done
 fi
 
+# Undo scenario 5 leftovers: the attack publishes a bucket policy Terraform does not manage.
+if BUCKET="$(tf_out data_bucket 2>/dev/null)"; then
+  aws s3api delete-bucket-policy --bucket "$BUCKET" >/dev/null 2>&1 || true
+fi
+
 log "Applying Terraform in '${MODE}' mode"
 "$TF_BIN" -chdir="$TF_DIR" init -input=false >/dev/null
 "$TF_BIN" -chdir="$TF_DIR" apply -input=false -auto-approve -var "lab_mode=${MODE}"

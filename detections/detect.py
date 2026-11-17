@@ -152,6 +152,31 @@ def r_console_no_mfa(ev: dict, cfg: dict) -> str | None:
     return None
 
 
+def r_bucket_exposure(ev: dict, cfg: dict) -> str | None:
+    name = ev.get("eventName")
+    p = params(ev)
+    bucket = p.get("bucketName")
+    if name in ("DeletePublicAccessBlock", "DeleteBucketPolicy"):
+        return f"{name} on {bucket}"
+    if name == "PutBucketPolicy":
+        policy = p.get("policy")
+        # LocalStack logs an empty policy, so an unreadable policy fails closed.
+        if not policy:
+            return f"Bucket policy replaced on {bucket} (policy text not in the event)"
+        try:
+            doc = policy if isinstance(policy, dict) else json.loads(policy)
+        except ValueError:
+            return f"Bucket policy replaced on {bucket} (policy text unreadable)"
+        stmts = doc.get("Statement", [])
+        for st in [stmts] if isinstance(stmts, dict) else stmts:
+            who = st.get("Principal")
+            if st.get("Effect") == "Allow" and (who == "*" or (isinstance(who, dict) and "*" in str(who.get("AWS")))):
+                return f"Public bucket policy set on {bucket}"
+    if name == "PutBucketAcl" and any(g in json.dumps(p) for g in ("AllUsers", "AuthenticatedUsers", "public-read")):
+        return f"Public ACL set on {bucket}"
+    return None
+
+
 RULES = [
     Rule("LAB-001", "IAM policy version set as default", "HIGH",
          "T1098.003 Account Manipulation: Additional Cloud Roles", r_policy_version_default),
@@ -165,6 +190,8 @@ RULES = [
          "T1580 Cloud Infrastructure Discovery", r_secret_enumeration),
     Rule("LAB-007", "Console login without MFA", "HIGH",
          "T1078.004 Valid Accounts: Cloud Accounts", r_console_no_mfa),
+    Rule("LAB-008", "S3 bucket exposure changed", "HIGH",
+         "T1530 Data from Cloud Storage", r_bucket_exposure),
 ]
 
 

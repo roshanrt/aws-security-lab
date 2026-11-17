@@ -50,6 +50,12 @@ class DetectRulesTest(unittest.TestCase):
         self.assertEqual(len(hits), 1)  # the MFA login is not a finding
         self.assertEqual(hits[0].principal, "lab-contractor")
 
+    def test_bucket_exposure(self):
+        details = [h.detail for h in self.by_rule["LAB-008"]]
+        self.assertEqual(len(details), 3)  # block removed, unreadable policy, public policy
+        self.assertTrue(any("not in the event" in d for d in details))
+        self.assertTrue(any("Public bucket policy" in d for d in details))
+
     def test_successful_only_drops_failed_attempts(self):
         events = detect.load_events_file(os.path.join(HERE, "sample_events.json"))
         findings = detect.evaluate(events, detect.DEFAULT_SECRET_ALLOWLIST, include_failed=False)
