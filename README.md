@@ -141,11 +141,10 @@ Latest attack simulation on a fresh deploy: 9 attacks, none missed.
 | Outcome | Attacks |
 |---------|---------|
 | Prevented (call refused) | A1 and A2 (stop CloudTrail, as the pipeline role and as account root) |
-| Both prevented and reported | A4 (attach AdministratorAccess), A5 (unbounded role), A6 (read the database secret), A8 (schedule key deletion), A9 (break-glass without MFA) |
+| Both prevented and reported | A4 (attach AdministratorAccess), A5 (unbounded role), A6 (read the database secret), A7 (public bucket policy), A8 (schedule key deletion), A9 (break-glass without MFA) |
 | Detected, then contained | A3 (security group opened to the internet): the detector found it and closed it again |
-| Detected | A7 (public bucket policy): the call succeeds, and the detector reports it |
 
-A7 is an honest gap: the pipeline role can still replace the data bucket's policy, and the system detects it rather than preventing it. Closing that is on the roadmap.
+A7 used to be a gap: the pipeline role could replace the data bucket's policy and the system only reported it. The guardrail boundary now denies bucket policy, ACL and Block Public Access changes for every role except the MFA-gated admin and break-glass roles (assertion `WKL-09`).
 
 Design docs:
 
@@ -308,8 +307,7 @@ enterprise/    Part 2: the landing zone
 
 ## Roadmap
 
-1. **Prevent public bucket policies.** Deny `s3:PutBucketPolicy` and `s3:DeleteBucketPolicy` for everyone except the deployer, so A7 is blocked instead of only detected.
-2. **Request logging and rotation.** WAF, ALB and CloudFront logs to the log archive, CloudTrail S3 data events, and a Secrets Manager rotation Lambda.
-3. **Run it on a real AWS organization.** Replace the bootstrap user with IAM Identity Center and CI OIDC, replace root with a deploy role, and work through the "verify on real AWS" column in `COVERAGE.md`.
-4. **Watch the watcher.** A heartbeat alarm when the detector stops, an organization trail, root-activity findings, and a second containment playbook.
-5. **More base scenarios.** Role trust policy backdoor (`UpdateAssumeRolePolicy`, T1098), access key persistence (`CreateAccessKey` for another user, T1098.001), KMS key scheduled for deletion (T1485), Lambda environment variable secrets (T1552.001).
+1. **Request logging and rotation.** WAF, ALB and CloudFront logs to the log archive, CloudTrail S3 data events, and a Secrets Manager rotation Lambda.
+2. **Run it on a real AWS organization.** Replace the bootstrap user with IAM Identity Center and CI OIDC, replace root with a deploy role, and work through the "verify on real AWS" column in `COVERAGE.md`.
+3. **Watch the watcher.** A heartbeat alarm when the detector stops, an organization trail, root-activity findings, and a second containment playbook.
+4. **More base scenarios.** Role trust policy backdoor (`UpdateAssumeRolePolicy`, T1098), access key persistence (`CreateAccessKey` for another user, T1098.001), KMS key scheduled for deletion (T1485), Lambda environment variable secrets (T1552.001).

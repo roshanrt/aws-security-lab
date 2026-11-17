@@ -170,6 +170,20 @@ resource "aws_iam_policy" "guardrail_boundary" {
         Condition = { StringNotEquals = { "aws:RequestedRegion" = var.approved_regions } }
       },
       {
+        # Closes attack A7. Only the MFA-gated admin and break-glass roles may change who can
+        # read a bucket. Pipelines and developers deploy objects, not exposure.
+        Sid    = "DenyBucketExposureChanges"
+        Effect = "Deny"
+        Action = [
+          "s3:PutBucketPolicy", "s3:DeleteBucketPolicy", "s3:PutBucketAcl", "s3:PutObjectAcl",
+          "s3:PutBucketPublicAccessBlock", "s3:PutAccountPublicAccessBlock"
+        ]
+        Resource = "*"
+        Condition = {
+          ArnNotLike = { "aws:PrincipalArn" = ["${local.arn_prefix}:role/lz-admin", "${local.arn_prefix}:role/lz-break-glass"] }
+        }
+      },
+      {
         Sid      = "DenyLongLivedCredentials"
         Effect   = "Deny"
         Action   = ["iam:CreateUser", "iam:CreateAccessKey", "iam:CreateLoginProfile"]

@@ -649,6 +649,16 @@ Check 'WKL-06' 'A different workload identity cannot read the data bucket, even 
   Expect-Denied (Aws s3api get-object --bucket $W.bucket_name --key 'any/object.txt' "$env:TEMP\lz-should-not-exist.txt") 's3:GetObject on the data bucket as lz-ci-deployer'
 }
 
+Check 'WKL-09' 'Pipeline role cannot replace the data bucket policy or weaken Block Public Access (closes attack A7)' {
+  Use-CiRole $Acct.prod
+  $doc = Json-File ('{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::' + $W.bucket_name + '/*"}]}')
+  $r1 = Aws s3api put-bucket-policy --bucket $W.bucket_name --policy $doc
+  $r2 = Aws s3api delete-bucket-policy --bucket $W.bucket_name
+  $r3 = Aws s3api put-public-access-block --bucket $W.bucket_name --public-access-block-configuration 'BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false'
+  $bad = @(); if ($r1.Ok) { $bad += 'put-bucket-policy' }; if ($r2.Ok) { $bad += 'delete-bucket-policy' }; if ($r3.Ok) { $bad += 'put-public-access-block' }
+  Verdict 3 $bad 'calls'
+}
+
 Check 'WKL-07' 'The application runs in the private-app subnets with the app security group, under a role capped by the workload boundary' {
   Use-Account $Acct.prod
   $f = (Aws-Json lambda get-function-configuration --function-name $W.lambda_name)

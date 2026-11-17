@@ -217,7 +217,7 @@ Test IDs: assertions (`ORG`, `IAM`, `LOG`, `KMS`, `BKP`, `NET`, `WKL`, `EDG`, `D
 | ENT-002 | IAM policy or identity change | T1098 | A5 |
 | ENT-003 | AdministratorAccess attached | T1098.003 | A4 |
 | ENT-004 | Security group opened to the internet, with automatic containment | T1562.007 | A3 |
-| ENT-005 | Public bucket policy or ACL, Block Public Access weakened | T1530 | A7 |
+| ENT-005 | Public bucket policy or ACL, Block Public Access weakened | T1530 | A7 (prevented by the guardrail boundary), WKL-09 |
 | ENT-006 | KMS key disabled or scheduled for deletion | T1485 | A8 |
 | ENT-007 | Secret read outside the allowlist | T1555.006 | A6 |
 | ENT-008 | Break-glass role used | T1078.004 | A9 |
