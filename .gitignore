@@ -11,6 +11,5 @@ __pycache__/
 
 # Local only
 /blog/
-/enterprise/
 /README-WINDOWS.md
 /LICENSE
