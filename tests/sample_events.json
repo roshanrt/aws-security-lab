@@ -1,0 +1,56 @@
+{
+  "Records": [
+    {
+      "eventTime": "2026-11-16T18:00:00Z",
+      "eventName": "CreatePolicyVersion",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-intern", "arn": "arn:aws:iam::000000000000:user/lab-intern"},
+      "requestParameters": {"policyArn": "arn:aws:iam::000000000000:policy/lab-intern-policy", "setAsDefault": true}
+    },
+    {
+      "eventTime": "2026-11-16T18:01:00Z",
+      "eventName": "GetSecretValue",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-app"},
+      "requestParameters": {"secretId": "lab/app/api-key"}
+    },
+    {
+      "eventTime": "2026-11-16T18:02:00Z",
+      "eventName": "ListSecrets",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-app"},
+      "requestParameters": {}
+    },
+    {
+      "eventTime": "2026-11-16T18:03:00Z",
+      "eventName": "GetSecretValue",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-app"},
+      "requestParameters": {"secretId": "lab/prod/db-credentials"}
+    },
+    {
+      "eventTime": "2026-11-16T18:04:00Z",
+      "eventName": "StopLogging",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-ops"},
+      "requestParameters": {"name": "lab-trail"}
+    },
+    {
+      "eventTime": "2026-11-16T18:05:00Z",
+      "eventName": "GetSecretValue",
+      "userIdentity": {"type": "Root", "arn": "arn:aws:iam::000000000000:root"},
+      "requestParameters": {"secretId": "lab/prod/db-credentials"}
+    },
+    {
+      "CloudTrailEvent": "{\"eventTime\":\"2026-11-16T18:06:00Z\",\"eventName\":\"AttachUserPolicy\",\"userIdentity\":{\"type\":\"IAMUser\",\"userName\":\"lab-intern\"},\"requestParameters\":{\"userName\":\"lab-intern\",\"policyArn\":\"arn:aws:iam::aws:policy/AdministratorAccess\"},\"errorCode\":\"AccessDenied\"}"
+    },
+    {
+      "eventTime": "2026-11-16T18:07:00Z",
+      "eventName": "CreatePolicyVersion",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-intern"},
+      "requestParameters": {"policyArn": "arn:aws:iam::000000000000:policy/lab-intern-policy", "setAsDefault": true},
+      "errorCode": "AccessDenied"
+    },
+    {
+      "eventTime": "2026-11-16T18:08:00Z",
+      "eventName": "ListSecrets",
+      "userIdentity": {"type": "IAMUser", "userName": "lab-intern"},
+      "errorCode": "AccessDenied"
+    }
+  ]
+}

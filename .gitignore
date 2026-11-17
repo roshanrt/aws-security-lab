@@ -1,0 +1,16 @@
+# Terraform state holds the lab users' access keys. Never commit it.
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+*.zip
+__pycache__/
+*.pyc
+
+# Local only
+/blog/
+/enterprise/
+/README*.md
+/LICENSE
